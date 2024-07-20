@@ -352,17 +352,17 @@ function get_argon_formatted_paginate_links($maxPageNumbers, $extraClasses = '')
 	$res = preg_replace(
 		'/\'/',
 		'"',
-		$res
+		$res?? ''
 	);
 	$res = preg_replace(
 		'/<a class="prev page-numbers" href="(.*?)">(.*?)<\/a>/',
 		'',
-		$res
+		$res?? ''
 	);
 	$res = preg_replace(
 		'/<a class="next page-numbers" href="(.*?)">(.*?)<\/a>/',
 		'',
-		$res
+		$res?? ''
 	);
 	//寻找所有页码标签
 	preg_match_all('/<(.*?)>(.*?)<\/(.*?)>/' , $res , $pages);
@@ -1748,7 +1748,7 @@ function get_argon_comment_paginate_links_prev_url(){
 	$str = preg_replace(
 		'/\'/',
 		'"',
-		$str
+		$str?? ''
 	);
 	//获取上一页地址
 	$url = "";
@@ -1775,24 +1775,31 @@ function get_argon_comment_paginate_links_prev_url(){
 }
 //评论重排序（置顶优先）
 $GLOBALS['comment_order'] = get_option('comment_order');
-function argon_comment_cmp($a, $b){
-	$a_pinned = get_comment_meta($a -> comment_ID, 'pinned', true);
-	$b_pinned = get_comment_meta($b -> comment_ID, 'pinned', true);
-	if ($a_pinned != "true"){
-		$a_pinned = "false";
-	}
-	if ($b_pinned != "true"){
-		$b_pinned = "false";
-	}
-	if ($a_pinned == $b_pinned){
-		return ($a -> comment_date_gmt) > ($b -> comment_date_gmt);
-	}else{
-		if ($a_pinned == "true"){
-			return ($GLOBALS['comment_order'] == 'desc');
-		}else{
-			return ($GLOBALS['comment_order'] != 'desc');
-		}
-	}
+function argon_comment_cmp($a, $b) {
+    $a_pinned = get_comment_meta($a->comment_ID, 'pinned', true);
+    $b_pinned = get_comment_meta($b->comment_ID, 'pinned', true);
+
+    if ($a_pinned != "true") {
+        $a_pinned = "false";
+    }
+    if ($b_pinned != "true") {
+        $b_pinned = "false";
+    }
+
+    if ($a_pinned == $b_pinned) {
+        // 比较评论日期
+        if ($a->comment_date_gmt == $b->comment_date_gmt) {
+            return 0;
+        }
+        return ($a->comment_date_gmt < $b->comment_date_gmt) ? -1 : 1;
+    } else {
+        // 如果评论被置顶，根据评论顺序返回适当的整数
+        if ($a_pinned == "true") {
+            return ($GLOBALS['comment_order'] == 'desc') ? -1 : 1;
+        } else {
+            return ($GLOBALS['comment_order'] == 'desc') ? 1 : -1;
+        }
+    }
 }
 function argon_get_comments(){
 	global $wp_query;
@@ -1904,18 +1911,18 @@ function argon_lazyload($content){
 	$lazyload_loading_style = "lazyload-style-" . $lazyload_loading_style;
 
 	if(!is_feed() && !is_robots() && !is_home()){
-		$content = preg_replace('/<img(.*?)src=[\'"](.*?)[\'"](.*?)((\/>)|(<\/img>))/i',"<img class=\"lazyload " . $lazyload_loading_style . "\" src=\"data:image/svg+xml;base64,PCEtLUFyZ29uTG9hZGluZy0tPgo8c3ZnIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjZmZmZmZmMDAiPjxnPjwvZz4KPC9zdmc+\" \$1data-original=\"\$2\" src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC\"\$3$4" , $content);
-		$content = preg_replace('/<img(.*?)data-full-url=[\'"]([^\'"]+)[\'"](.*)>/i',"<img$1data-full-url=\"$2\" data-original=\"$2\"$3>" , $content);
-		$content = preg_replace('/<img(.*?)srcset=[\'"](.*?)[\'"](.*?)>/i',"<img$1$3>" , $content);
+		$content = preg_replace('/<img(.*?)src=[\'"](.*?)[\'"](.*?)((\/>)|(<\/img>))/i',"<img class=\"lazyload " . $lazyload_loading_style . "\" src=\"data:image/svg+xml;base64,PCEtLUFyZ29uTG9hZGluZy0tPgo8c3ZnIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjZmZmZmZmMDAiPjxnPjwvZz4KPC9zdmc+\" \$1data-original=\"\$2\" src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC\"\$3$4" , $content?? '');
+		$content = preg_replace('/<img(.*?)data-full-url=[\'"]([^\'"]+)[\'"](.*)>/i',"<img$1data-full-url=\"$2\" data-original=\"$2\"$3>" , $content?? '');
+		$content = preg_replace('/<img(.*?)srcset=[\'"](.*?)[\'"](.*?)>/i',"<img$1$3>" , $content?? '');
 	}
 	return $content;
 }
 function argon_fancybox($content){
 	if(!is_feed() && !is_robots() && !is_home()){
 		if (get_option('argon_enable_lazyload') != 'false'){
-			$content = preg_replace('/<img(.*?)data-original=[\'"](.*?)[\'"](.*?)((\/>)|>|(<\/img>))/i',"<div class='fancybox-wrapper lazyload-container-unload' data-fancybox='post-images' href='$2'>$0</div>" , $content);
+			$content = preg_replace('/<img(.*?)data-original=[\'"](.*?)[\'"](.*?)((\/>)|>|(<\/img>))/i',"<div class='fancybox-wrapper lazyload-container-unload' data-fancybox='post-images' href='$2'>$0</div>" , $content?? '');
 		}else{
-			$content = preg_replace('/<img(.*?)src=[\'"](.*?)[\'"](.*?)((\/>)|>|(<\/img>))/i',"<div class='fancybox-wrapper' data-fancybox='post-images' href='$2'>$0</div>" , $content);
+			$content = preg_replace('/<img(.*?)src=[\'"](.*?)[\'"](.*?)((\/>)|>|(<\/img>))/i',"<div class='fancybox-wrapper' data-fancybox='post-images' href='$2'>$0</div>" , $content?? '');
 		}
 	}
 	return $content;
